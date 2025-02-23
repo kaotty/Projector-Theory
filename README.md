@@ -10,7 +10,7 @@ All experiments are conducted with one or two NVIDIA RTX 3090 GPU(s). We mainly 
 pip install -r requirements.txt
 ```
 
-Next, be sure to set the directories before you run the expriments. This is done in the `scripts` folder. For example, if you want to pretrain with SimCLR on CIFAR-100, you may open `scripts/pretrain/cifar/simclr.yaml`, where you can set the dataset to 'cifar100', and training path and validation path to your directories. You may also change the hyper parameters here.
+Next, be sure to set the directories before you run the expriments. This is done in the `scripts` folder. For example, if you want to pretrain with SimCLR on CIFAR-100, you may open `scripts/pretrain/cifar/simclr.yaml`, where you can set the dataset to `cifar100`, and training path and validation path to your directories. You may also change the hyper parameters here.
 
 We provide code for SimCLR and Barlow Twins on CIFAR-10, CIFAR-100, and ImageNet-100. In order to conduct the experiments, you can run the following command.
 ```bash
