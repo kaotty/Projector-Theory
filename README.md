@@ -18,7 +18,7 @@ python main_pretrain.py --config-path scripts/pretrain/{dataset}/ --config-name 
 ```
 You may select the training dataset from `{cifar, imagenet-100}`. To specifically choose CIFAR-10 or CIFAR-100, you can edit the dataset in the `scripts/pretrain/cifar/.yaml` files. And if you wish to run the experiment using a specific framework, such as SimCLR, you can set the config name to `simclr.yaml`.
 <!-- You may set the config name to the one corresponding to the framework under this path. For instance, if you want to run the SimCLR experiments, you can set the config name to `simclr.yaml`. -->
-If you want to test the downstream performance of the model, you can save the checkpoint and conduct the linear probing downstream test using following command.
+If you want to test the downstream performance of the model, you can save the checkpoint and conduct the linear probing downstream test using the following command.
 ```bash
 python main_linear.py --config-path scripts/linear/{dataset}/ --config-name {config-name}
 ```
