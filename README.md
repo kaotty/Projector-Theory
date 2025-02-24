@@ -12,12 +12,17 @@ pip install -r requirements.txt
 
 Next, be sure to set the directories before you run the expriments. This is done in the `scripts` folder. For example, if you want to pretrain with SimCLR on CIFAR-100, you may open `scripts/pretrain/cifar/simclr.yaml`, where you can set the dataset to `cifar100`, and training path and validation path to your directories. You may also change the hyper parameters here.
 
-We provide code for SimCLR and Barlow Twins on CIFAR-10, CIFAR-100, and ImageNet-100. In order to conduct the experiments, you can run the following command.
+We provide code for SimCLR and Barlow Twins on CIFAR-10, CIFAR-100, and ImageNet-100. In order to conduct the pretraining experiments, you can run the following command.
 ```bash
 python main_pretrain.py --config-path scripts/pretrain/{dataset}/ --config-name {config-name}
 ```
-You may select the dataset from `{cifar, imagenet-100}`. To specifically choose CIFAR-10 or CIFAR-100, you can edit the dataset in the yaml files.
-You may set the config name to the one corresponding to the framework under this path. For instance, if you want to run the SimCLR experiments, you can set the config name to `simclr.yaml`.
+You may select the training dataset from `{cifar, imagenet-100}`. To specifically choose CIFAR-10 or CIFAR-100, you can edit the dataset in the `scripts/pretrain/cifar/.yaml` files. And if you wish to run the experiment using a specific framework, such as SimCLR, you can set the config name to `simclr.yaml`.
+<!-- You may set the config name to the one corresponding to the framework under this path. For instance, if you want to run the SimCLR experiments, you can set the config name to `simclr.yaml`. -->
+If you want to test the downstream performance of the model, you can save the checkpoint and conduct the linear probing downstream test using following command.
+```bash
+python main_linear.py --config-path scripts/linear/{dataset}/ --config-name {config-name}
+```
+Ensure that you use the same dataset and framework as those employed in the pretraining experiment.
 
 ## Citing this work
 ```
