@@ -276,7 +276,7 @@ class SimCLR(BaseMethod):
         self.log("I(Z1;R)", -self.encoder_nce_loss, on_epoch=True, sync_dist=True)
         self.log("train_class_loss", self.class_loss, on_epoch=True, sync_dist=True)
         self.log("train_reg_loss", self.reg_loss, on_epoch=True, sync_dist=True)
-        self.log("lower_bound", self.lower_bound, on_epoch=True, sync_dist=True)
+        # self.log("lower_bound", self.lower_bound, on_epoch=True, sync_dist=True)
         self.log("true_lower_bound", -self.encoder_nce_loss-self.reg_loss, on_epoch=True, sync_dist=True)
         self.log("upper_bound", self.upper_bound, on_epoch=True, sync_dist=True)
         self.log("train_acc", self.acc, on_epoch=True, sync_dist=True)
