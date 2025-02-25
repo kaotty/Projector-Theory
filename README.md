@@ -24,7 +24,7 @@ python main_linear.py --config-path scripts/linear/{dataset}/ --config-name {con
 ```
 Ensure that you use the same dataset and framework as those employed in the pretraining experiment.
 
-## Utility of specific methods
+## Utility of Specific Methods
 In our paper, we provide three regularization methods: training regularization, discrete projector, and sparse autoencoder. The first two methods have already been implemented in the provided code. And if you wish to explore the sparse autoencoder method, you can substitute the given projector with your own autoencoder architecture. For instance, you may define the encoder-decoder pairs as follows:
 ```python
 self.auto_encoder: nn.Module = nn.Linear(self.features_dim, latents_dim)
@@ -34,7 +34,7 @@ self.pre_bias =nn.Parameter(torch.zeros(self.features_dim))
 Alternatively, you are free to use other autoencoder implementations of your choice. By incorporating the `self.sparse_autoencoder` function, the sparse autoencoder can serve as an effective projector.
 
 
-## Citing this work
+## Citing This Work
 ```
 to be filled
 ```
