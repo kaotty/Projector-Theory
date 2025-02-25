@@ -57,4 +57,5 @@ def barlow_loss_func(
     cdif = (corr - diag).pow(2)
     cdif[~diag.bool()] *= lamb
     loss = scale_loss * cdif.sum()
+
     return loss

@@ -20,6 +20,8 @@
 import torch
 import torch.nn.functional as F
 from solo.utils.misc import gather, get_rank
+from scipy.linalg import logm
+import numpy
 
 
 def simclr_loss_func(
@@ -53,7 +55,9 @@ def simclr_loss_func(
     # negatives
     neg_mask = indexes.t() != gathered_indexes
 
+    #calculate NCELoss via positive and negative sample pairs
     pos = torch.sum(sim * pos_mask, 1)
     neg = torch.sum(sim * neg_mask, 1)
     loss = -(torch.mean(torch.log(pos / (pos + neg))))
-    return loss
+
+    return loss 

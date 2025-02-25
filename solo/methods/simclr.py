@@ -74,6 +74,20 @@ def matrix_mutual_information(Z1, Z2, alpha):
     mutual_info = h1 + h2 - joint_entropy
     return mutual_info
 
+def sparse_autoencoder(z:torch.Tensor) :
+    #----------------encoder--------------
+    z = torch.relu(self.auto_encoder(z))
+    #---------top-k sparsity--------------
+    z_values, z_indices = torch.topk(z, self.topk, dim=1)
+
+    mask = torch.zeros_like(z)
+    z_values_ones = torch.ones_like(z_values)
+    mask.scatter_(1, z_indices, z_values_ones)
+    sparse_z = z * mask
+    #----------------decoder---------------
+    z_out = self.auto_decoder(sparse_z)
+    return z_out 
+
 
 class SimCLR(BaseMethod):
     def __init__(self, cfg: omegaconf.DictConfig):

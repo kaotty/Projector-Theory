@@ -55,6 +55,7 @@ def main(cfg: DictConfig):
     # without making the user specify every single thing about the model
     OmegaConf.set_struct(cfg, False)
     cfg = parse_cfg(cfg)
+    #save your checkpoints of pretraining experiments here to test the downstream performance
     cfg.pretrained_feature_extractor = '{your checkpoint}'
 
     backbone_model = BaseMethod._BACKBONES[cfg.backbone.name]
