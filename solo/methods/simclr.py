@@ -100,6 +100,7 @@ class SimCLR(BaseMethod):
         self.alpha = cfg.alpha
         self.mu = cfg.mu
         #sparse autoencoder parameter
+        self.if_sparse = cfg.sparse_autoencoder
         self.topk = cfg.topk
         self.latents_dim = cfg.latents_dim
 
