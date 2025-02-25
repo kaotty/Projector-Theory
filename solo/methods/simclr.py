@@ -74,20 +74,6 @@ def matrix_mutual_information(Z1, Z2, alpha):
     mutual_info = h1 + h2 - joint_entropy
     return mutual_info
 
-def sparse_autoencoder(z:torch.Tensor) :
-    #----------------encoder--------------
-    z = torch.relu(self.auto_encoder(z))
-    #---------top-k sparsity--------------
-    z_values, z_indices = torch.topk(z, self.topk, dim=1)
-
-    mask = torch.zeros_like(z)
-    z_values_ones = torch.ones_like(z_values)
-    mask.scatter_(1, z_indices, z_values_ones)
-    sparse_z = z * mask
-    #----------------decoder---------------
-    z_out = self.auto_decoder(sparse_z)
-    return z_out 
-
 
 class SimCLR(BaseMethod):
     def __init__(self, cfg: omegaconf.DictConfig):
@@ -108,9 +94,14 @@ class SimCLR(BaseMethod):
         proj_output_dim: int = cfg.method_kwargs.proj_output_dim
         self.final_dim: int = cfg.final_dim
         self.point_num: int = cfg.point_num
+        #regularization parameter
         self.lmbd = cfg.lmbd
+        #renyi-entropy parameter
         self.alpha = cfg.alpha
         self.mu = cfg.mu
+        #sparse autoencoder parameter
+        self.topk = cfg.topk
+        self.latents_dim = cfg.latents_dim
 
         # discrete projector
         self.projector = nn.Sequential(
@@ -282,5 +273,19 @@ class SimCLR(BaseMethod):
         self.log("train_acc", self.acc, on_epoch=True, sync_dist=True)
 
         return self.nce_loss + self.class_loss + self.lmbd * self.reg_loss
+
+    def sparse_autoencoder(self, z:torch.Tensor) :
+        #----------------encoder--------------
+        z = torch.relu(self.auto_encoder(z))
+        #---------top-k sparsity--------------
+        z_values, z_indices = torch.topk(z, self.topk, dim=1)
+
+        mask = torch.zeros_like(z)
+        z_values_ones = torch.ones_like(z_values)
+        mask.scatter_(1, z_indices, z_values_ones)
+        sparse_z = z * mask
+        #----------------decoder---------------
+        z_out = self.auto_decoder(sparse_z)
+        return z_out 
 
         

@@ -63,20 +63,6 @@ def matrix_mutual_information(Z1, Z2, alpha):
     mutual_info = h1 + h2 - joint_entropy
     return mutual_info
 
-def sparse_autoencoder(z:torch.Tensor) :
-    #----------------encoder--------------
-    z = torch.relu(self.auto_encoder(z))
-    #---------top-k sparsity--------------
-    z_values, z_indices = torch.topk(z, self.topk, dim=1)
-
-    mask = torch.zeros_like(z)
-    z_values_ones = torch.ones_like(z_values)
-    mask.scatter_(1, z_indices, z_values_ones)
-    sparse_z = z * mask
-    #----------------decoder---------------
-    z_out = self.auto_decoder(sparse_z)
-    return z_out 
-
 
 class BarlowTwins(BaseMethod):
     def __init__(self, cfg: omegaconf.DictConfig):
@@ -96,7 +82,13 @@ class BarlowTwins(BaseMethod):
         self.scale_loss: float = cfg.method_kwargs.scale_loss
         self.final_dim: int = cfg.final_dim
         self.point_num: int = cfg.point_num
+        #regularization parameter
         self.lmbd = cfg.lmbd
+        #renyi-entropy parameter
+        self.alpha = cfg.alpha
+        #sparse autoencoder parameter
+        self.topk = cfg.topk
+        self.latents_dim = cfg.latents_dim
 
         proj_hidden_dim: int = cfg.method_kwargs.proj_hidden_dim
         proj_output_dim: int = cfg.final_dim
@@ -198,18 +190,41 @@ class BarlowTwins(BaseMethod):
         out = super().training_step(batch, batch_idx)
         self.class_loss = out["loss"]
         self.acc = out["acc"]
-        z1, z2 = out["z2"]
+        proj1, proj2 = out["z2"]
+        enc1, enc2 = out["z1"]
 
         # ------- barlow twins loss -------
-        self.barlow_loss = barlow_loss_func(z1, z2, lamb=self.lamb, scale_loss=self.scale_loss)
+        self.barlow_loss = barlow_loss_func(proj1, proj2, lamb=self.lamb, scale_loss=self.scale_loss)
+        self.encoder_barlow_loss = barlow_loss_func(enc1, enc2, lamb=self.lamb, scale_loss=self.scale_loss)
 
-        z1 = F.normalize(torch.cat(out["z1"]))
-        z2 = F.normalize(torch.cat(out["z2"]))
-        self.reg_loss = matrix_mutual_information(z1, z2, 2)
+        Z1 = F.normalize(torch.cat(out["z1"]))
+        Z2 = F.normalize(torch.cat(out["z2"]))
+        self.reg_loss = matrix_mutual_information(Z1, Z2, self.alpha)
+        self.encoder_mat_info = renyi_entropy(Z1 @ Z1.T, self.alpha)
+        self.projector_mat_info = renyi_entropy(Z2 @ Z2.T, self.alpha)
+        self.upper_bound = self.encoder_mat_info - self.reg_loss
+        self.lower_bound = -self.encoder_barlow_loss - self.reg_loss
 
         self.log("train_barlow_loss", self.barlow_loss, on_epoch=True, sync_dist=True)
         self.log("train_class_loss", self.class_loss, on_epoch=True, sync_dist=True)
         self.log("train_reg_loss", self.reg_loss, on_epoch=True, sync_dist=True)
         self.log("train_acc", self.acc, on_epoch=True, sync_dist=True)
+        #add upper bound and lower bound:
+        self.log("train_upper_bound", self.upper_bound, on_epoch=True, sync_dist=True)
+        self.log("train_lower_bound", self.lower_bound, on_epoch=True, sync_dist=True)
 
         return self.barlow_loss + self.class_loss + self.lmbd * self.reg_loss
+
+    def sparse_autoencoder(self, z:torch.Tensor) :
+        #----------------encoder--------------
+        z = torch.relu(self.auto_encoder(z))
+        #---------top-k sparsity--------------
+        z_values, z_indices = torch.topk(z, self.topk, dim=1)
+
+        mask = torch.zeros_like(z)
+        z_values_ones = torch.ones_like(z_values)
+        mask.scatter_(1, z_indices, z_values_ones)
+        sparse_z = z * mask
+        #----------------decoder---------------
+        z_out = self.auto_decoder(sparse_z)
+        return z_out 

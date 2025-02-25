@@ -56,3 +56,5 @@ sync_batchnorm: True
 accelerator: "gpu"
 strategy: "ddp"
 precision: 16-mixed
+topk: 1000
+latents_dim: 100000
