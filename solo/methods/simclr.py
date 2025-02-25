@@ -94,13 +94,13 @@ class SimCLR(BaseMethod):
         proj_output_dim: int = cfg.method_kwargs.proj_output_dim
         self.final_dim: int = cfg.final_dim
         self.point_num: int = cfg.point_num
-        #regularization parameter
+        # regularization parameter
         self.lmbd = cfg.lmbd
-        #renyi-entropy parameter
+        # renyi-entropy parameter
         self.alpha = cfg.alpha
         self.mu = cfg.mu
-        #sparse autoencoder parameter
-        self.if_sparse = cfg.sparse_autoencoder
+        # sparse autoencoder parameter
+        self.if_sparse = cfg.sparse_autoencoder # whether use sparse autoencoder or not
         self.topk = cfg.topk
         self.latents_dim = cfg.latents_dim
 
@@ -255,6 +255,7 @@ class SimCLR(BaseMethod):
             temperature=self.temperature,
         )
 
+        # online accuracy based on projector features
         self.pre_loss = F.cross_entropy(z3, targets)
 
         self.reg_loss = matrix_mutual_information(z1, z2, self.alpha)  
@@ -262,30 +263,35 @@ class SimCLR(BaseMethod):
         self.upper_bound = renyi_entropy(z1 @ z1.T, self.alpha) - self.reg_loss
         self.uni_loss = uniformity_loss_TCR(z1)
         
+        # record the vutal params during training
+        # online accuracy and loss
         self.log("train_pre_loss", self.pre_loss, on_epoch=True, sync_dist=True)
         self.log("train_pre_acc", pre_acc, on_epoch=True, sync_dist=True)
+
+        # tendency of parameters during training
         self.log("train_nce_loss", self.nce_loss, on_epoch=True, sync_dist=True)
         self.log("I(Z1;R)", -self.encoder_nce_loss, on_epoch=True, sync_dist=True)
         self.log("train_class_loss", self.class_loss, on_epoch=True, sync_dist=True)
         self.log("train_reg_loss", self.reg_loss, on_epoch=True, sync_dist=True)
         # self.log("lower_bound", self.lower_bound, on_epoch=True, sync_dist=True)
-        self.log("true_lower_bound", -self.encoder_nce_loss-self.reg_loss, on_epoch=True, sync_dist=True)
+        
+        self.log("lower_bound", -self.encoder_nce_loss-self.reg_loss, on_epoch=True, sync_dist=True)
         self.log("upper_bound", self.upper_bound, on_epoch=True, sync_dist=True)
         self.log("train_acc", self.acc, on_epoch=True, sync_dist=True)
 
         return self.nce_loss + self.class_loss + self.lmbd * self.reg_loss
 
     def sparse_autoencoder(self, z:torch.Tensor) :
-        #----------------encoder--------------
+        # ----------------encoder--------------
         z = torch.relu(self.auto_encoder(z))
-        #---------top-k sparsity--------------
+        # ---------top-k sparsity--------------
         z_values, z_indices = torch.topk(z, self.topk, dim=1)
 
         mask = torch.zeros_like(z)
         z_values_ones = torch.ones_like(z_values)
         mask.scatter_(1, z_indices, z_values_ones)
         sparse_z = z * mask
-        #----------------decoder---------------
+        # ----------------decoder---------------
         z_out = self.auto_decoder(sparse_z)
         return z_out 
 
