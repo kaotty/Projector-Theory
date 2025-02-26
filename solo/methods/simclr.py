@@ -94,6 +94,7 @@ class SimCLR(BaseMethod):
         proj_output_dim: int = cfg.method_kwargs.proj_output_dim
         self.final_dim: int = cfg.final_dim
         self.point_num: int = cfg.point_num
+
         # regularization parameter
         self.lmbd = cfg.lmbd
         # renyi-entropy parameter
@@ -105,14 +106,21 @@ class SimCLR(BaseMethod):
         self.latents_dim = cfg.latents_dim
 
         # discrete projector
-        # if True then utilize the sparse autoencoder (can be implemented with other two methods)
-        self.projector = nn.Sequential(
-            nn.Linear(self.features_dim, proj_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(proj_hidden_dim, self.final_dim),
-        ) 
-        self.cls = nn.Linear(self.final_dim, 100)
-        self.projector2 = nn.Linear(proj_output_dim, self.final_dim)
+        # if True then employ the sparse autoencoder (can be implemented with other two methods)
+        if self.if_sparse :
+            self.projector = nn.Sequential()
+            self.auto_encoder: nn.Module = nn.Linear(self.features_dim, self.latents_dim)
+            self.auto_decoder: nn.Module = nn.Linear(self.latents_dim, self.features_dim)
+            self.pre_bias =nn.Parameter(torch.zeros(self.features_dim))
+            self.cls = nn.Linear(self.features_dim, 100)
+        # if False then just employ the original projector 
+        else :
+            self.projector = nn.Sequential(
+                nn.Linear(self.features_dim, proj_hidden_dim),
+                nn.ReLU(),
+                nn.Linear(proj_hidden_dim, self.final_dim),
+            )
+            self.cls = nn.Linear(self.final_dim, 100)
 
     
     @property
@@ -152,9 +160,17 @@ class SimCLR(BaseMethod):
         Returns:
             List[dict]: list of learnable parameters.
         """
-
-        extra_learnable_params = [{"name": "projector", "params": self.projector.parameters()},
-                                  {"name": "cls", "params": self.cls.parameters()}]
+        if self.if_sparse :
+            extra_learnable_params = [{"name": "projector", "params": self.projector.parameters()},
+                                      {"name": "cls", "params": self.cls.parameters()},
+                                      # add learnable params of sparse autoencoder
+                                      {"name": "bias", "params": self.pre_bias},                      
+                                      {"name": "autoencoder", "params": self.auto_encoder.parameters()},
+                                      {"name": "autodecoder", "params": self.auto_decoder.parameters()},
+                                     ]
+        else :
+            extra_learnable_params = [{"name": "projector", "params": self.projector.parameters()},
+                                    {"name": "cls", "params": self.cls.parameters()}]
         return super().learnable_params + extra_learnable_params
     
     def round_ste(self, z):
@@ -194,6 +210,10 @@ class SimCLR(BaseMethod):
         out = super().forward(X)
         z1 = out["z1"]
         z2 = self.projector(z1)
+        if self.if_sparse :
+            # employ the sparse autoencoder as projector
+            z2 = self.sparse_autoencoder(z2 - self.pre_bias)
+            z2 = z2 + self.pre_bias
         if self.point_num != 0:
             z2 = self.quantize(z2, self.point_num)
         z3 = self.cls(z2)
@@ -244,12 +264,14 @@ class SimCLR(BaseMethod):
         n_augs = self.num_large_crops + self.num_small_crops
         indexes = indexes.repeat(n_augs)
 
+        # NCELoss for projector features
         self.nce_loss = simclr_loss_func(
             z2,
             indexes=indexes,
             temperature=self.temperature,
         )
 
+        # NCELoss for encoder features
         self.encoder_nce_loss = simclr_loss_func(
             z1,
             indexes=indexes,
@@ -274,8 +296,8 @@ class SimCLR(BaseMethod):
         self.log("I(Z1;R)", -self.encoder_nce_loss, on_epoch=True, sync_dist=True)
         self.log("train_class_loss", self.class_loss, on_epoch=True, sync_dist=True)
         self.log("train_reg_loss", self.reg_loss, on_epoch=True, sync_dist=True)
-        # self.log("lower_bound", self.lower_bound, on_epoch=True, sync_dist=True)
         
+        # record both bounds and online accuracy
         self.log("lower_bound", -self.encoder_nce_loss-self.reg_loss, on_epoch=True, sync_dist=True)
         self.log("upper_bound", self.upper_bound, on_epoch=True, sync_dist=True)
         self.log("train_acc", self.acc, on_epoch=True, sync_dist=True)

@@ -82,6 +82,7 @@ class BarlowTwins(BaseMethod):
         self.scale_loss: float = cfg.method_kwargs.scale_loss
         self.final_dim: int = cfg.final_dim
         self.point_num: int = cfg.point_num
+
         # regularization parameter
         self.lmbd = cfg.lmbd
         # renyi-entropy parameter
@@ -95,16 +96,28 @@ class BarlowTwins(BaseMethod):
         proj_output_dim: int = cfg.final_dim
 
         # projector
-        # if True then use the sparse autoencoder (can be emplemented with other two methods)
-        self.projector = nn.Sequential(
-            nn.Linear(self.features_dim, proj_hidden_dim),
-            nn.BatchNorm1d(proj_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(proj_hidden_dim, proj_hidden_dim),
-            nn.BatchNorm1d(proj_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(proj_hidden_dim, self.final_dim),
-        )
+        # if True then employ the sparse autoencoder (can be emplemented with other two methods)
+        if self.if_sparse :
+            # preserve half of the original projector 
+            self.projector = nn.Sequential(
+                nn.Linear(self.features_dim, proj_hidden_dim),
+                nn.BatchNorm1d(proj_hidden_dim),
+                nn.ReLU(),
+            )
+            self.auto_encoder: nn.Module = nn.Linear(proj_hidden_dim, self.latents_dim)
+            self.auto_decoder: nn.Module = nn.Linear(self.latents_dim, proj_hidden_dim)
+            self.pre_bias =nn.Parameter(torch.zeros(proj_hidden_dim))
+        # if False then just employ the original projector
+        else :
+            self.projector = nn.Sequential(
+                nn.Linear(self.features_dim, proj_hidden_dim),
+                nn.BatchNorm1d(proj_hidden_dim),
+                nn.ReLU(),
+                nn.Linear(proj_hidden_dim, proj_hidden_dim),
+                nn.BatchNorm1d(proj_hidden_dim),
+                nn.ReLU(),
+                nn.Linear(proj_hidden_dim, self.final_dim),
+            )
 
     @staticmethod
     def add_and_assert_specific_cfg(cfg: omegaconf.DictConfig) -> omegaconf.DictConfig:
@@ -127,6 +140,25 @@ class BarlowTwins(BaseMethod):
 
         return cfg
     
+
+    @property
+    def learnable_params(self) -> List[dict]:
+        """Adds projector parameters to parent's learnable parameters.
+
+        Returns:
+            List[dict]: list of learnable parameters.
+        """
+        if self.if_sparse :
+            extra_learnable_params = [{"name": "projector", "params": self.projector.parameters()},
+                                      # add learnable params of sparse autoencoder
+                                      {"name": "bias", "params": self.pre_bias},                      
+                                      {"name": "autoencoder", "params": self.auto_encoder.parameters()},
+                                      {"name": "autodecoder", "params": self.auto_decoder.parameters()},
+                                     ]
+        else :
+            extra_learnable_params = [{"name": "projector", "params": self.projector.parameters()}]
+        return super().learnable_params + extra_learnable_params
+
     def round_ste(self, z):
         """Round with straight through gradients."""
         zhat = z.round()
@@ -149,17 +181,6 @@ class BarlowTwins(BaseMethod):
         half_width = discretization // 2 # Renormalize to [-1， 1]
         return quantized / half_width
 
-    @property
-    def learnable_params(self) -> List[dict]:
-        """Adds projector parameters to parent's learnable parameters.
-
-        Returns:
-            List[dict]: list of learnable parameters.
-        """
-
-        extra_learnable_params = [{"name": "projector", "params": self.projector.parameters()}]
-        return super().learnable_params + extra_learnable_params
-
     def forward(self, X):
         """Performs the forward pass of the backbone and the projector.
 
@@ -172,6 +193,10 @@ class BarlowTwins(BaseMethod):
 
         out = super().forward(X)
         z2 = self.projector(out["z1"])
+        if self.if_sparse :
+            # employ the sparse autoencoder as projector
+            z2 = self.sparse_autoencoder(z2 - self.pre_bias)
+            z2 = z2 + self.pre_bias
         if self.point_num != 0:
             z2 = self.quantize(z2, self.point_num)
         out.update({"z2": z2})

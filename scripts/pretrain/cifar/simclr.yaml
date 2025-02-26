@@ -47,8 +47,8 @@ auto_resume:
 # overwrite PL stuff
 max_epochs: 200
 final_dim: 256
-point_num: 0
-lmbd: 0
+point_num: 0 # discrete projector parameter
+lmbd: 0 # trainging regularization parameter
 mu: 0
 alpha: 2
 devices: [0]
@@ -56,6 +56,7 @@ sync_batchnorm: True
 accelerator: "gpu"
 strategy: "ddp"
 precision: 16-mixed
+# sparse autoencoder parameters
 topk: 1000
 latents_dim: 100000
-sparse_autoencoder: True
+sparse_autoencoder: True # whether or not to enable SAE
