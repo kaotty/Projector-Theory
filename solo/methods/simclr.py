@@ -99,7 +99,6 @@ class SimCLR(BaseMethod):
         self.lmbd = cfg.lmbd
         # renyi-entropy parameter
         self.alpha = cfg.alpha
-        self.mu = cfg.mu
         # sparse autoencoder parameter
         self.if_sparse = cfg.sparse_autoencoder # whether use sparse autoencoder or not
         self.topk = cfg.topk
@@ -282,9 +281,8 @@ class SimCLR(BaseMethod):
         self.pre_loss = F.cross_entropy(z3, targets)
 
         self.reg_loss = matrix_mutual_information(z1, z2, self.alpha)  
-        self.lower_bound = - self.reg_loss - self.nce_loss
+        self.lower_bound = -self.encoder_nce_loss - self.reg_loss
         self.upper_bound = renyi_entropy(z1 @ z1.T, self.alpha) - self.reg_loss
-        self.uni_loss = uniformity_loss_TCR(z1)
         
         # record the vutal params during training
         # online accuracy and loss
@@ -298,7 +296,7 @@ class SimCLR(BaseMethod):
         self.log("train_reg_loss", self.reg_loss, on_epoch=True, sync_dist=True)
         
         # record both bounds and online accuracy
-        self.log("lower_bound", -self.encoder_nce_loss-self.reg_loss, on_epoch=True, sync_dist=True)
+        self.log("lower_bound", self.lower_bound, on_epoch=True, sync_dist=True)
         self.log("upper_bound", self.upper_bound, on_epoch=True, sync_dist=True)
         self.log("train_acc", self.acc, on_epoch=True, sync_dist=True)
 
