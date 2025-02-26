@@ -48,8 +48,7 @@ auto_resume:
 max_epochs: 200
 final_dim: 256
 point_num: 0 # discrete projector parameter
-lmbd: 0 # trainging regularization parameter
-mu: 0
+lmbd: 0 # training regularization parameter
 alpha: 2
 devices: [0]
 sync_batchnorm: True
