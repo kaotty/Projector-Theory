@@ -25,7 +25,7 @@ python main_linear.py --config-path scripts/linear/{dataset}/ --config-name {con
 Ensure that you use the same dataset and framework as those employed in the pretraining experiment.
 
 ## Utility of Specific Methods
-In our paper, we provide three regularization methods: training regularization (controlled by parameter `lmbd`), discrete projector (configured via `point_num`), and sparse autoencoder (enabled by flag `sparse_autoencoder`). If you wish to explore the sparse autoencoder method under a specific framework, such as SimCLR, you can set the `sparse_autoencoder: True` in `simclr.yaml`. By adjusting `lmbd` and `ponit_num` you can activate training regularization and discrete projector, either individually or in combined configurations.
+In our paper, we provide three regularization methods: training regularization (controlled by parameter `lmbd`), discrete projector (controlled by parameter `point_num`), and sparse autoencoder (enabled by flag `sparse_autoencoder`). If you wish to explore the sparse autoencoder method under a specific framework, such as SimCLR, you can set the `sparse_autoencoder` to `True` in `simclr.yaml`. By adjusting `lmbd` and `ponit_num`, you can activate training regularization and the discrete projector, either individually or in combined configurations.
 <!-- Alternatively, you are free to use other autoencoder implementations of your choice. By incorporating the `self.sparse_autoencoder` function, the sparse autoencoder can serve as an effective projector. -->
 
 
