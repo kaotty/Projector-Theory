@@ -49,7 +49,6 @@ max_epochs: 100
 final_dim: 2048
 point_num: 0
 lmbd: 0
-mu: 0
 alpha: 2
 devices: [0, 1]
 sync_batchnorm: True
