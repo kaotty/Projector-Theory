@@ -105,6 +105,7 @@ class SimCLR(BaseMethod):
         self.latents_dim = cfg.latents_dim
 
         # discrete projector
+        # if True then utilize the sparse autoencoder (can be implemented with other two methods)
         self.projector = nn.Sequential(
             nn.Linear(self.features_dim, proj_hidden_dim),
             nn.ReLU(),

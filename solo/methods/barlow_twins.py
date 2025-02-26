@@ -95,6 +95,7 @@ class BarlowTwins(BaseMethod):
         proj_output_dim: int = cfg.final_dim
 
         # projector
+        # if True then use the sparse autoencoder (can be emplemented with other two methods)
         self.projector = nn.Sequential(
             nn.Linear(self.features_dim, proj_hidden_dim),
             nn.BatchNorm1d(proj_hidden_dim),
